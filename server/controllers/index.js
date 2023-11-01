@@ -2,16 +2,23 @@
 const models = require('../models');
 
 // get the Cat model
-const { Cat } = models;
+const { Cat, Dog } = models;
 
 // default fake data so that we have something to work with until we make a real Cat
-const defaultData = {
+const defaultCatData = {
   name: 'unknown',
   bedsOwned: 0,
 };
 
+const defaultDogData = {
+  name: 'unknown',
+  breed: 'unknown',
+  age: 0,
+}
+
 // object for us to keep track of the last Cat we made and dynamically update it sometimes
-let lastAdded = new Cat(defaultData);
+let lastCatAdded = new Cat(defaultCatData);
+let lastDogAdded = new Dog(defaultDogData)
 
 // Function to handle rendering the index page.
 const hostIndex = (req, res) => {
@@ -19,7 +26,8 @@ const hostIndex = (req, res) => {
      We pass it a number of variables to populate the page.
   */
   res.render('index', {
-    currentName: lastAdded.name,
+    currentCatName: lastCatAdded.name,
+    currentDogName: lastDogAdded.name,
     title: 'Home',
     pageName: 'Home Page',
   });
@@ -79,15 +87,21 @@ const hostPage2 = (req, res) => {
 };
 
 // Function to render the untemplated page3.
-const hostPage3 = (req, res) => {
-  res.render('page3');
+const hostPage3 = async (req, res) => {
+  try {
+    const docs = await Dog.find({}).lean().exec();
+    return res.render('page3', { dogs: docs });
+  } catch (err) {
+    console.log(err);
+    return res.status(500).json({ error: 'failed to find dogs' });
+  }
 };
 
 // Get name will return the name of the last added cat.
-const getName = (req, res) => res.json({ name: lastAdded.name });
+const getName = (req, res) => res.json({ name: lastCatAdded.name });
 
 // Function to create a new cat in the database
-const setName = async (req, res) => {
+const setCatName = async (req, res) => {
   /* If we look at views/page2.handlebars, the form has inputs for a firstname, lastname
      and a number of beds. When this POST request is sent to us, the bodyParser plugin
      we configured in app.js will store that information in req.body for us.
@@ -143,12 +157,40 @@ const setName = async (req, res) => {
      up here. We will update our lastAdded cat to the one we just added. We will then send that
      cat's data to the client.
   */
-  lastAdded = newCat;
+  lastCatAdded = newCat;
   return res.json({
-    name: lastAdded.name,
-    beds: lastAdded.bedsOwned,
+    name: lastCatAdded.name,
+    beds: lastCatAdded.bedsOwned,
   });
 };
+
+const setDogName = async (req, res) => {
+  if (!req.body.firstname || !req.body.lastname || !req.body.breed || !req.body.age) {
+    return res.status(400).json({ error: 'firstname, lastname, breed, and age are all required' });
+  }
+  
+  const dogData = {
+    name: `${req.body.firstname} ${req.body.lastname}`,
+    breed: `${req.body.breed}`,
+    age: req.body.age,
+  };
+
+  const newDog = new Dog(dogData);
+  
+  try {
+    await newDog.save();
+  } catch (err) {
+    console.log(err);
+    return res.status(500).json({ error: 'failed to create dog' });
+  }
+  
+  lastDogAdded = newDog;
+  return res.json({
+    name: lastDogAdded.name,
+    breeed: lastDogAdded.breed,
+    age: lastDogAdded.age,
+  });
+}
 
 // Function to handle searching a cat by name.
 const searchName = async (req, res) => {
@@ -202,6 +244,28 @@ const searchName = async (req, res) => {
    the right element in the database based on query, modifying it, and updating
    it. For this example we will just update the last one we added for simplicity.
 */
+
+const updateAge = async (req, res) => {
+
+  if (!req.query.name) {
+    return res.status(400).json({ error: 'Name is required to perform a search' });
+  }
+
+  let doc;
+  try {
+    doc = await Dog.findOneAndUpdate({name: req.query.name}, {$inc: {age: 1}}).exec(); 
+  } catch (err) {
+    console.log(err);
+    return res.status(500).json({ error: 'Something went wrong' });
+  }
+
+  if (!doc) {
+    return res.json({ error: 'No dogs found' });
+  }
+
+  return res.json({ name: doc.name, breed: doc.breed, age: doc.age });
+};
+
 const updateLast = (req, res) => {
   // First we will update the number of bedsOwned.
   lastAdded.bedsOwned++;
@@ -248,8 +312,10 @@ module.exports = {
   page2: hostPage2,
   page3: hostPage3,
   getName,
-  setName,
+  setCatName,
+  setDogName,
   updateLast,
   searchName,
+  updateAge,
   notFound,
 };
