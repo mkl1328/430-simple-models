@@ -14,11 +14,11 @@ const defaultDogData = {
   name: 'unknown',
   breed: 'unknown',
   age: 0,
-}
+};
 
 // object for us to keep track of the last Cat we made and dynamically update it sometimes
 let lastCatAdded = new Cat(defaultCatData);
-let lastDogAdded = new Dog(defaultDogData)
+let lastDogAdded = new Dog(defaultDogData);
 
 // Function to handle rendering the index page.
 const hostIndex = (req, res) => {
@@ -86,11 +86,15 @@ const hostPage2 = (req, res) => {
   res.render('page2');
 };
 
+const hostPage3 = (req, res) => {
+  res.render('page3');
+};
+
 // Function to render the untemplated page3.
-const hostPage3 = async (req, res) => {
+const hostPage4 = async (req, res) => {
   try {
     const docs = await Dog.find({}).lean().exec();
-    return res.render('page3', { dogs: docs });
+    return res.render('page4', { dogs: docs });
   } catch (err) {
     console.log(err);
     return res.status(500).json({ error: 'failed to find dogs' });
@@ -168,7 +172,7 @@ const setDogName = async (req, res) => {
   if (!req.body.firstname || !req.body.lastname || !req.body.breed || !req.body.age) {
     return res.status(400).json({ error: 'firstname, lastname, breed, and age are all required' });
   }
-  
+
   const dogData = {
     name: `${req.body.firstname} ${req.body.lastname}`,
     breed: `${req.body.breed}`,
@@ -176,21 +180,21 @@ const setDogName = async (req, res) => {
   };
 
   const newDog = new Dog(dogData);
-  
+
   try {
     await newDog.save();
   } catch (err) {
     console.log(err);
     return res.status(500).json({ error: 'failed to create dog' });
   }
-  
+
   lastDogAdded = newDog;
   return res.json({
     name: lastDogAdded.name,
     breeed: lastDogAdded.breed,
     age: lastDogAdded.age,
   });
-}
+};
 
 // Function to handle searching a cat by name.
 const searchName = async (req, res) => {
@@ -246,14 +250,13 @@ const searchName = async (req, res) => {
 */
 
 const updateAge = async (req, res) => {
-
   if (!req.query.name) {
     return res.status(400).json({ error: 'Name is required to perform a search' });
   }
 
   let doc;
   try {
-    doc = await Dog.findOneAndUpdate({name: req.query.name}, {$inc: {age: 1}}).exec(); 
+    doc = await Dog.findOneAndUpdate({ name: req.query.name }, { $inc: { age: 1 } }).exec();
   } catch (err) {
     console.log(err);
     return res.status(500).json({ error: 'Something went wrong' });
@@ -268,7 +271,7 @@ const updateAge = async (req, res) => {
 
 const updateLast = (req, res) => {
   // First we will update the number of bedsOwned.
-  lastAdded.bedsOwned++;
+  lastCatAdded.bedsOwned++;
 
   /* Remember that lastAdded is a Mongoose document (made on line 14 if no new
      ones were made after the server started, or line 116 if there was). Mongo
@@ -283,12 +286,12 @@ const updateLast = (req, res) => {
 
      We can use async/await for this, or just use standard promise .then().catch() syntax.
   */
-  const savePromise = lastAdded.save();
+  const savePromise = lastCatAdded.save();
 
   // If we successfully save/update them in the database, send back the cat's info.
   savePromise.then(() => res.json({
-    name: lastAdded.name,
-    beds: lastAdded.bedsOwned,
+    name: lastCatAdded.name,
+    beds: lastCatAdded.bedsOwned,
   }));
 
   // If something goes wrong saving to the database, log the error and send a message to the client.
@@ -311,6 +314,7 @@ module.exports = {
   page1: hostPage1,
   page2: hostPage2,
   page3: hostPage3,
+  page4: hostPage4,
   getName,
   setCatName,
   setDogName,

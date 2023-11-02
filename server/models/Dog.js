@@ -1,9 +1,9 @@
 const mongoose = require('mongoose');
 
-let DogModel = {}
+let DogModel = {};
 
 const DogSchema = new mongoose.Schema({
-  //name, breed, age, createdDate
+  // name, breed, age, createdDate
   name: {
     type: String,
     required: true,
@@ -31,4 +31,4 @@ const DogSchema = new mongoose.Schema({
 
 DogModel = mongoose.model('Dog', DogSchema);
 
-module.exports = DogModel
+module.exports = DogModel;
